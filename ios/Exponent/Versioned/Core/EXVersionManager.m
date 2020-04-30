@@ -83,6 +83,10 @@ void EXRegisterScopedModule(Class moduleClass, ...)
 
 @end
 
+// Declare header for Swift class
+@interface EXDevMenuExtensions : NSObject
+@end
+
 @interface EXVersionManager ()
 
 // is this the first time this ABI has been touched at runtime?
@@ -365,6 +369,7 @@ void EXRegisterScopedModule(Class moduleClass, ...)
   NSString *localStorageDirectory = [fileSystemModule.documentDirectory stringByAppendingPathComponent:EX_UNVERSIONED(@"RCTAsyncLocalStorage")];
   [extraModules addObject:[[RCTAsyncLocalStorage alloc] initWithStorageDirectory:localStorageDirectory]];
 
+  [extraModules addObject:[EXDevMenuExtensions new]];
   return extraModules;
 }
 
