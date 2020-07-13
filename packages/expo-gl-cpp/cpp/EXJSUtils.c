@@ -7,6 +7,45 @@
 #include <JavaScriptCore/JSStringRef.h>
 #include <JavaScriptCore/JSContextRef.h>
 
+double EXJSValueToNumberFast(JSContextRef ctx, JSValueRef v)
+{
+#if __LP64__ // arm64 version
+  union {
+    int64_t asInt64;
+    double asDouble;
+    struct { int32_t asInt; int32_t tag; } asBits;
+  } taggedValue = { .asInt64 = (int64_t)v };
+
+#define DoubleEncodeOffset 0x1000000000000ll
+#define TagTypeNumber 0xffff0000
+#define ValueTrue 0x7
+
+#ifdef __APPLE__
+  int32_t tagTypeNumber = EXiOSGetOperatingSystemVersion().majorVersion >= 14
+     ? 0xffff0000
+     : 0xfffe0000;
+#else
+  int32_t tagTypeNumber = 0xffff0000;
+#endif
+
+  if( (taggedValue.asBits.tag & TagTypeNumber) == tagTypeNumber ) {
+    return taggedValue.asBits.asInt;
+  }
+  else if( taggedValue.asBits.tag & TagTypeNumber ) {
+    taggedValue.asInt64 -= DoubleEncodeOffset;
+    return taggedValue.asDouble;
+  }
+  else if( taggedValue.asBits.asInt == ValueTrue ) {
+    return 1.0;
+  }
+  else {
+    return 0; // false, undefined, null, object
+  }
+#else // armv7 version
+  return JSValueToNumber(ctx, v, NULL);
+#endif
+}
+
 void EXJSConsoleLog(JSContextRef ctx, const char *msg) {
   JSObjectRef global = JSContextGetGlobalObject(ctx);
   JSObjectRef console = (JSObjectRef) EXJSObjectGetPropertyNamed(ctx, global, "console");
